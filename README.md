@@ -19,7 +19,7 @@ A premium, aesthetic music player application built with Flutter, themed around 
 
 | Library | Player | Lyrics |
 |:---:|:---:|:---:|
-| <!-- Add Screenshots Here --> | <!-- Add Screenshots Here --> | <!-- Add Screenshots Here --> |
+| ![Library](assets/screenshots/library.png) | ![Player](assets/screenshots/player.png) | ![Lyrics](assets/screenshots/lyrics.png) |
 
 ## 🛠️ Tech Stack
 
