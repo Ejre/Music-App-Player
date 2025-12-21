@@ -59,49 +59,11 @@ class _FullPlayerPageState extends State<FullPlayerPage> {
         ),
         actions: [
            IconButton(
-             icon: const Icon(Icons.more_vert, color: Colors.white), 
+             icon: Icon(_showLyrics ? Icons.image : Icons.queue_music, color: Colors.white, size: 32), 
              onPressed: () {
-               showModalBottomSheet(
-                 context: context,
-                 backgroundColor: const Color(0xFF1B0526),
-                 shape: const RoundedRectangleBorder(
-                   borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                 ),
-                 builder: (context) {
-                   return SafeArea(
-                     child: Column(
-                       mainAxisSize: MainAxisSize.min,
-                       children: [
-                         ListTile(
-                           leading: const Icon(Icons.playlist_add, color: Colors.white),
-                           title: const Text('Add to Playlist', style: TextStyle(color: Colors.white)),
-                           onTap: () {
-                             Navigator.pop(context);
-                             // TODO: Implement Add to Playlist
-                           },
-                         ),
-                         ListTile(
-                           leading: const Icon(Icons.timer, color: Colors.white),
-                           title: const Text('Sleep Timer', style: TextStyle(color: Colors.white)),
-                           onTap: () {
-                             Navigator.pop(context);
-                             // TODO: Implement Sleep Timer
-                           },
-                         ),
-                         const Divider(color: Colors.white24),
-                         ListTile(
-                           leading: const Icon(Icons.close, color: Colors.white),
-                           title: const Text('Close Player', style: TextStyle(color: Colors.white)),
-                           onTap: () {
-                             Navigator.pop(context); // Close sheet
-                             Navigator.pop(context); // Close player
-                           },
-                         ),
-                       ],
-                     ),
-                   );
-                 },
-               );
+               setState(() {
+                 _showLyrics = !_showLyrics;
+               });
              }
            ),
         ],
@@ -223,48 +185,38 @@ class _FullPlayerPageState extends State<FullPlayerPage> {
                   builder: (context, state) {
                     final song = state.currentSong;
                     return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                           // Lyrics Toggle
-                           IconButton(
-                             icon: Icon(Icons.lyrics_rounded, 
-                               color: _showLyrics ? const Color(0xFF39C5BB) : Colors.white54
-                             ),
-                             onPressed: () {
-                               setState(() {
-                                 _showLyrics = !_showLyrics;
-                               });
-                             }, 
-                           ),
-                           
                            Expanded(
                              child: Column(
+                               crossAxisAlignment: CrossAxisAlignment.start, // LEFT ALIGNED
                                children: [
                                  SizedBox(
-                                   height: 40, // Constrain height for scrolling text
-                                   child: Center(
+                                   height: 40, 
+                                   child: Align( 
+                                     alignment: Alignment.centerLeft,
                                      child: ScrollingText(
                                        text: song?.title ?? "No Song",
                                        style: theme.textTheme.headlineSmall?.copyWith(
                                          color: Colors.white,
                                          fontWeight: FontWeight.bold,
+                                         fontSize: 24, 
                                        ),
                                      ),
                                    ),
                                  ),
-                                 const SizedBox(height: 8),
-                                 SizedBox(
-                                   height: 30, // Constrain height for secondary text
-                                   child: Center(
-                                     child: ScrollingText(
-                                       text: song?.artist ?? "Unknown Artist",
-                                       style: theme.textTheme.titleMedium?.copyWith(
-                                         color: const Color(0xFF39C5BB), // Cyan Artist
-                                       ),
-                                     ),
+                                 const SizedBox(height: 4),
+                                 Text( 
+                                   song?.artist ?? "Unknown Artist",
+                                   style: theme.textTheme.titleMedium?.copyWith(
+                                     color: const Color(0xFF39C5BB), // Cyan Artist
+                                     fontSize: 18,
                                    ),
+                                   maxLines: 1,
+                                   overflow: TextOverflow.ellipsis,
                                  ),
                                ],
                              ),
@@ -281,8 +233,8 @@ class _FullPlayerPageState extends State<FullPlayerPage> {
                                return IconButton(
                                  icon: Icon(
                                    isFavorite ? Icons.favorite : Icons.favorite_border_rounded,
-                                   color: isFavorite ? const Color(0xFFE4007F) : Colors.white54, // Pink heart
-                                   size: 28,
+                                   color: isFavorite ? const Color(0xFF39C5BB) : Colors.white54, // Cyan active
+                                   size: 32,
                                  ),
                                  onPressed: () {
                                    if (song != null) {
@@ -319,12 +271,13 @@ class _FullPlayerPageState extends State<FullPlayerPage> {
                             SliderTheme(
                               data: SliderTheme.of(context).copyWith(
                                 trackHeight: 4,
-                                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                                overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+                                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 0), // Hidden thumb per reference (or very small)
+                                overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
                                 activeTrackColor: const Color(0xFF39C5BB), // Cyan Track
                                 inactiveTrackColor: Colors.white12,
-                                thumbColor: Colors.white,
+                                thumbColor: const Color(0xFF39C5BB),
                                 overlayColor: const Color(0xFF39C5BB).withOpacity(0.2),
+                                trackShape: const RoundedRectSliderTrackShape(),
                               ),
                               child: Slider(
                                 min: 0.0,
@@ -342,14 +295,14 @@ class _FullPlayerPageState extends State<FullPlayerPage> {
                               ),
                             ),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              padding: const EdgeInsets.symmetric(horizontal: 4), // Aligned with slider
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(_formatDuration(Duration(milliseconds: value.round())), 
-                                    style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                                    style: const TextStyle(color: Colors.white54, fontSize: 13)),
                                   Text(_formatDuration(state.duration), 
-                                    style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                                    style: const TextStyle(color: Colors.white54, fontSize: 13)),
                                 ],
                               ),
                             ),
@@ -370,7 +323,7 @@ class _FullPlayerPageState extends State<FullPlayerPage> {
                      previous.loopMode != current.loopMode,
                   builder: (context, state) {
                     return Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly, 
                       children: [
                         // Shuffle
                         IconButton(
@@ -382,11 +335,11 @@ class _FullPlayerPageState extends State<FullPlayerPage> {
                         
                         // Previous
                         IconButton(
-                          icon: const Icon(Icons.skip_previous_rounded, size: 42, color: Colors.white),
+                          icon: const Icon(Icons.skip_previous_rounded, size: 48, color: Colors.white), 
                           onPressed: () => context.read<PlayerBloc>().add(PlayerPrevious()),
                         ),
                         
-                        // Play/Pause - Miku Gradient
+                        // Play/Pause - Cyan Circle
                         GestureDetector(
                           onTap: () {
                             if (state.status == bloc_state.PlayerStatus.playing) {
@@ -400,11 +353,7 @@ class _FullPlayerPageState extends State<FullPlayerPage> {
                             width: 75,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF39C5BB), Color(0xFFE4007F)], // Cyan to Pink
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
+                              color: const Color(0xFF39C5BB), // Solid Cyan
                               boxShadow: [
                                 BoxShadow(
                                   color: const Color(0xFF39C5BB).withOpacity(0.4),
@@ -419,14 +368,14 @@ class _FullPlayerPageState extends State<FullPlayerPage> {
                                   ? Icons.pause_rounded
                                   : Icons.play_arrow_rounded,
                               size: 40,
-                              color: Colors.white,
+                              color: Colors.black, // Dark Icon
                             ),
                           ),
                         ),
                         
                         // Next
                         IconButton(
-                          icon: const Icon(Icons.skip_next_rounded, size: 42, color: Colors.white),
+                          icon: const Icon(Icons.skip_next_rounded, size: 48, color: Colors.white),
                           onPressed: () => context.read<PlayerBloc>().add(PlayerNext()),
                         ),
                         
@@ -436,7 +385,7 @@ class _FullPlayerPageState extends State<FullPlayerPage> {
                              state.loopMode == bloc_state.LoopMode.one 
                                ? Icons.repeat_one_rounded
                                : Icons.repeat_rounded, 
-                             color: state.loopMode != bloc_state.LoopMode.off ? Colors.purpleAccent : Colors.white54,
+                             color: state.loopMode != bloc_state.LoopMode.off ? const Color(0xFF39C5BB) : Colors.white54,
                              size: 28,
                           ),
                           onPressed: () => context.read<PlayerBloc>().add(PlayerRepeat()),
@@ -446,7 +395,7 @@ class _FullPlayerPageState extends State<FullPlayerPage> {
                   },
                 ),
                 
-                const SizedBox(height: 40),
+                const SizedBox(height: 48),
               ],
             ),
           ),
