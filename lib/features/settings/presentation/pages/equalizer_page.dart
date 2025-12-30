@@ -134,38 +134,13 @@ class _EqualizerPageState extends State<EqualizerPage> {
           ),
         child: Column(
           children: [
-            // Debug Info
-            Padding(
-               padding: const EdgeInsets.all(8.0),
-               child: Text(
-                 "Debug: SessionID=$_sessionId (${_sessionId == 0 ? 'Global Fallback' : 'Native'}), Bands=${_bands.length}, CustomEq=$_enableCustomEq",
-                 style: const TextStyle(color: Colors.white30, fontSize: 10),
-               ),
-            ),
-
             if (_sessionId == null)
               const Expanded(child: Center(child: Text("Audio Session not available (Start music first)", style: TextStyle(color: Colors.white54)))),
             
             if (_sessionId != null && _bands.isEmpty) ...[
-               Expanded(
+               const Expanded(
                  child: Center(
-                   child: Column(
-                     mainAxisAlignment: MainAxisAlignment.center,
-                     children: [
-                       const Text("Equalizer connected but no bands found.", style: TextStyle(color: Colors.white54)),
-                       const SizedBox(height: 8),
-                       const Text("Verify audio is playing and press Refresh.", style: TextStyle(color: Colors.white30, fontSize: 12)),
-                       const SizedBox(height: 16),
-                       ElevatedButton(
-                         onPressed: () {
-                              _initEqualizer(); // Keeps regular init
-                              _forceInitGlobal(); // And tries forced global
-                         },
-                         child: const Text("Force Global ID (0)"),
-                         style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00FFCC), foregroundColor: Colors.black),
-                       ),
-                     ],
-                   ),
+                   child: Text("Equalizer connected but no bands found.\nTry playing music and refreshing.", textAlign: TextAlign.center, style: TextStyle(color: Colors.white54)),
                  ),
                ),
             ],
