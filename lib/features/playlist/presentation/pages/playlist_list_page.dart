@@ -12,13 +12,20 @@ class PlaylistListPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 80.0),
-        child: FloatingActionButton(
-          backgroundColor: const Color(0xFF39C5BB),
-          child: const Icon(Icons.add, color: Colors.black),
-          onPressed: () => _showCreatePlaylistDialog(context),
-        ),
+      floatingActionButton: BlocBuilder<PlaylistBloc, PlaylistState>(
+        builder: (context, state) {
+          if (state is PlaylistLoaded && state.playlists.isNotEmpty) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 80.0),
+              child: FloatingActionButton(
+                backgroundColor: const Color(0xFF39C5BB),
+                child: const Icon(Icons.add, color: Colors.black),
+                onPressed: () => _showCreatePlaylistDialog(context),
+              ),
+            );
+          }
+           return const SizedBox.shrink();
+        },
       ),
       body: BlocBuilder<PlaylistBloc, PlaylistState>(
         builder: (context, state) {
