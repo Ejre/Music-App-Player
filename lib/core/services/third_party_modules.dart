@@ -13,7 +13,8 @@ abstract class ThirdPartyModules {
     builder: () => AudioPlayerHandler(),
     config: const AudioServiceConfig(
       androidNotificationChannelId: 'com.ezra.musicplayer.channel.audio',
-      androidNotificationChannelName: 'Music Playback',
+      androidNotificationChannelName: 'μRhythm Playback',
+      androidNotificationIcon: 'mipmap/launcher_icon',
       androidNotificationOngoing: true,
     ),
   );
