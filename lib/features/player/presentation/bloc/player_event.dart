@@ -64,3 +64,12 @@ class PlayerPositionChanged extends PlayerEvent {
 }
 
 class PlayerCheckLyrics extends PlayerEvent {}
+
+class SetSleepTimer extends PlayerEvent {
+  final Duration duration;
+  const SetSleepTimer(this.duration);
+  @override
+  List<Object?> get props => [duration];
+}
+
+class CancelSleepTimer extends PlayerEvent {}

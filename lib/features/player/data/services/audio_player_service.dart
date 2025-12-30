@@ -14,6 +14,7 @@ abstract class AudioPlayerService {
   Stream<PlayerState> get playerStateStream;
   Stream<void> get skipToNextStream;
   Stream<void> get skipToPreviousStream;
+  Future<int?> getAudioSessionId();
 }
 
 @LazySingleton(as: AudioPlayerService)
@@ -66,4 +67,9 @@ class AudioPlayerServiceImpl implements AudioPlayerService {
 
   @override
   Stream<void> get skipToPreviousStream => (_audioHandler as AudioPlayerHandler).skipToPreviousStream;
+
+  @override
+  Future<int?> getAudioSessionId() async {
+    return (_audioHandler as AudioPlayerHandler).internalPlayer.androidAudioSessionId;
+  }
 }

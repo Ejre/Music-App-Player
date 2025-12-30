@@ -33,7 +33,8 @@ class PlayerBloc extends Bloc<PlayerEvent, bloc_state.PlayerState> {
     on<PlayerStateChanged>(_onPlayerStateChanged);
     on<PlayerDurationChanged>(_onDurationChanged);
     on<PlayerPositionChanged>(_onPositionChanged);
-    on<PlayerCheckLyrics>(_onCheckLyrics);
+    on<SetSleepTimer>(_onSetSleepTimer);
+    on<CancelSleepTimer>(_onCancelSleepTimer);
 
     // Listen to service streams
     _playerStateSubscription = _playerService.playerStateStream.listen((playerState) {
@@ -74,6 +75,22 @@ class PlayerBloc extends Bloc<PlayerEvent, bloc_state.PlayerState> {
     _skipPreviousSubscription = _playerService.skipToPreviousStream.listen((_) {
       add(PlayerPrevious());
     });
+  }
+  
+  Timer? _sleepTimer;
+
+  void _onSetSleepTimer(SetSleepTimer event, Emitter<bloc_state.PlayerState> emit) {
+    _sleepTimer?.cancel();
+    _sleepTimer = Timer(event.duration, () {
+      add(PlayerPause());
+      _sleepTimer = null;
+    });
+    // Optionally emit state change if UI needs to show timer active
+  }
+
+  void _onCancelSleepTimer(CancelSleepTimer event, Emitter<bloc_state.PlayerState> emit) {
+    _sleepTimer?.cancel();
+    _sleepTimer = null;
   }
 
   void _onPlayerStateChanged(PlayerStateChanged event, Emitter<bloc_state.PlayerState> emit) {
@@ -260,6 +277,7 @@ class PlayerBloc extends Bloc<PlayerEvent, bloc_state.PlayerState> {
     _durationSubscription?.cancel();
     _skipNextSubscription?.cancel();
     _skipPreviousSubscription?.cancel();
+    _sleepTimer?.cancel();
     return super.close();
   }
 }

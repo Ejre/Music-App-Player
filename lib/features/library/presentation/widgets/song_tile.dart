@@ -120,25 +120,12 @@ class SongTile extends StatelessWidget {
 
               // Action / Visuals (e.g. duration or menu)
               if (!isPlaying)
-                PopupMenuButton<String>(
+                IconButton(
                   icon: Icon(Icons.more_vert, color: Colors.white.withOpacity(0.3), size: 20),
-                  onSelected: (value) {
-                    if (value == 'delete') {
-                      onDelete();
-                    }
-                  },
-                  itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                    const PopupMenuItem<String>(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                          SizedBox(width: 8),
-                          Text('Delete', style: TextStyle(color: Colors.red)),
-                        ],
-                      ),
-                    ),
-                  ],
+                  onPressed: onLongPress,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  visualDensity: VisualDensity.compact,
                 )
               else 
                  Icon(Icons.volume_up_rounded, color: theme.colorScheme.primary, size: 20),

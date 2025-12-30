@@ -10,10 +10,11 @@ import 'song_search_delegate.dart';
 import '../bloc/library_bloc.dart';
 import '../bloc/library_event.dart';
 import '../bloc/library_state.dart';
-import '../bloc/library_event.dart'; // Ensure event is imported
 import '../../../../features/player/presentation/bloc/player_state.dart';
 import '../widgets/song_tile.dart';
 import '../widgets/song_options_bottom_sheet.dart';
+import '../../../../features/playlist/presentation/pages/playlist_list_page.dart';
+import '../../../../features/settings/presentation/pages/settings_page.dart';
 
 class LibraryPage extends StatefulWidget {
   const LibraryPage({super.key});
@@ -23,9 +24,7 @@ class LibraryPage extends StatefulWidget {
 }
 
 class _LibraryPageState extends State<LibraryPage> {
-  // We'll inject the AudioPlayerService directly here for now for simplicity,
-  // ideally this should be in a PlayerBloc.
-
+  
   @override
   void initState() {
     super.initState();
@@ -33,30 +32,20 @@ class _LibraryPageState extends State<LibraryPage> {
   }
 
   Future<void> _requestPermission() async {
-    // Determine which permission to ask based on Android version/Platform
-    // For simplicity, we ask for both (runtime checks handling internally by plugin usually or we logic check)
-    // Actually permission_handler handles this well.
-    
-    // For Android 13+ (SDK 33), we need READ_MEDIA_AUDIO
-    // For below, READ_EXTERNAL_STORAGE.
-    
     Map<Permission, PermissionStatus> statuses = await [
       Permission.storage,
       Permission.audio,
     ].request();
     
-    // For Android 11+ (R) we might need Manage External Storage for full delete access
-    // This is frowned upon by Play Store but fine for personal app.
     if (await Permission.manageExternalStorage.status.isDenied) {
         await Permission.manageExternalStorage.request();
     }
 
     if (statuses[Permission.storage]!.isGranted || 
-        statuses[Permission.audio]!.isGranted ||
+        statuses[Permission.audio]!.isGranted || 
         await Permission.manageExternalStorage.isGranted) {
        _loadSongs();
     } else {
-       // Show dialog or retry
        debugPrint("Permission denied");
     }
   }
@@ -67,113 +56,142 @@ class _LibraryPageState extends State<LibraryPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('μRhythm'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-               showSearch(context: context, delegate: SongSearchDelegate(context.read<LibraryBloc>()));
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.favorite),
-            onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesPage()));
-            },
-          ),
-        ],
-      ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF2D0019), // Very Dark Pink (Top)
-              Color(0xFF101010), // Black (Mid)
-              Color(0xFF0D1C1B), // Very Dark Cyan (Bottom)
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('μRhythm'),
+          bottom: const TabBar(
+            indicatorColor: Color(0xFF39C5BB),
+            indicatorWeight: 3,
+            labelColor: Color(0xFF39C5BB),
+            unselectedLabelColor: Colors.white60,
+            tabs: [
+              Tab(text: "Songs"),
+              Tab(text: "Playlists"),
             ],
-            stops: [0.0, 0.5, 1.0],
           ),
-        ),
-        child: Stack(
-          children: [
-            BlocBuilder<LibraryBloc, LibraryState>(
-              builder: (context, state) {
-                if (state is LibraryLoading) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (state is LibraryLoaded) {
-                  if (state.songs.isEmpty) {
-                     return const Center(child: Text('No songs found'));
-                  }
-                  return BlocBuilder<PlayerBloc, PlayerState>(
-                    buildWhen: (previous, current) => previous.currentSong != current.currentSong,
-                    builder: (context, playerState) {
-                      return ListView.builder(
-                        physics: const BouncingScrollPhysics(), // iOS-style smooth scrolling
-                        cacheExtent: 500, // Pre-load items off-screen
-                        itemExtent: 81.0, // Fixed height for performance
-                        padding: const EdgeInsets.fromLTRB(0, 0, 0, 100), // Zero side padding
-                        itemCount: state.songs.length,
-                        itemBuilder: (context, index) {
-                          final song = state.songs[index];
-                          final isPlaying = playerState.currentSong?.id == song.id;
-                          
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 1.0),
-                            child: RepaintBoundary(
-                              child: SongTile(
-                                song: song,
-                                isPlaying: isPlaying,
-                                onTap: () {
-                                  final currentSongs = state.songs;
-                                  context.read<PlayerBloc>().add(PlayerSetQueue(currentSongs, initialIndex: index));
-                                },
-                                onDelete: () {
-                                  _showDeleteConfirmation(context, song);
-                                },
-                                onLongPress: () {
-                                  showModalBottomSheet(
-                                    context: context,
-                                    isScrollControlled: true,
-                                    backgroundColor: Colors.transparent,
-                                    builder: (context) => SongOptionsBottomSheet(
-                                      song: song,
-                                      onDelete: () {
-                                        _showDeleteConfirmation(context, song);
-                                      },
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    }
-                  );
-                } else if (state is LibraryError) {
-                   return Center(child: Text(state.message));
-                }
-                return const Center(child: Text('Waiting for permissions...'));
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () {
+                 showSearch(context: context, delegate: SongSearchDelegate(context.read<LibraryBloc>()));
               },
             ),
-            const Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: MiniPlayerWidget(),
+            IconButton(
+              icon: const Icon(Icons.favorite),
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesPage()));
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.settings),
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()));
+              },
             ),
           ],
+        ),
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFF2D0019), // Very Dark Pink (Top)
+                Color(0xFF101010), // Black (Mid)
+                Color(0xFF0D1C1B), // Very Dark Cyan (Bottom)
+              ],
+              stops: [0.0, 0.5, 1.0],
+            ),
+          ),
+          child: Stack(
+            children: [
+              TabBarView(
+                children: [
+                  // Tab 1: Songs
+                  _buildSongsList(),
+                  // Tab 2: Playlists
+                  const PlaylistListPage(),
+                ],
+              ),
+              const Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: MiniPlayerWidget(),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
+  Widget _buildSongsList() {
+    return BlocBuilder<LibraryBloc, LibraryState>(
+      builder: (context, state) {
+        if (state is LibraryLoading) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (state is LibraryLoaded) {
+          if (state.songs.isEmpty) {
+             return const Center(child: Text('No songs found'));
+          }
+          return BlocBuilder<PlayerBloc, PlayerState>(
+            buildWhen: (previous, current) => previous.currentSong != current.currentSong,
+            builder: (context, playerState) {
+              return ListView.builder(
+                physics: const BouncingScrollPhysics(),
+                cacheExtent: 500,
+                itemExtent: 81.0, 
+                padding: const EdgeInsets.fromLTRB(0, 0, 0, 100),
+                itemCount: state.songs.length,
+                itemBuilder: (context, index) {
+                  final song = state.songs[index];
+                  final isPlaying = playerState.currentSong?.id == song.id;
+                  
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 1.0),
+                    child: RepaintBoundary(
+                      child: SongTile(
+                        song: song,
+                        isPlaying: isPlaying,
+                        onTap: () {
+                          final currentSongs = state.songs;
+                          context.read<PlayerBloc>().add(PlayerSetQueue(currentSongs, initialIndex: index));
+                        },
+                        onDelete: () {
+                          _showDeleteConfirmation(context, song);
+                        },
+                        onLongPress: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (context) => SongOptionsBottomSheet(
+                              song: song,
+                              onDelete: () {
+                                _showDeleteConfirmation(context, song);
+                              },
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  );
+                },
+              );
+            }
+          );
+        } else if (state is LibraryError) {
+           return Center(child: Text(state.message));
+        }
+        return const Center(child: Text('Waiting for permissions...'));
+      },
+    );
+  }
+
   Future<void> _showDeleteConfirmation(BuildContext context, dynamic song) async {
-    // song is of type Song entity
     return showDialog(
       context: context,
       builder: (context) {
