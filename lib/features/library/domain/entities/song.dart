@@ -9,6 +9,8 @@ class Song extends Equatable {
   final String? uri;
   final int? duration;
   final String? dateAdded;
+  final int? size;
+  final String? fileExtension;
 
   const Song({
     required this.id,
@@ -19,8 +21,10 @@ class Song extends Equatable {
     this.uri,
     this.duration,
     this.dateAdded,
+    this.size,
+    this.fileExtension,
   });
 
   @override
-  List<Object?> get props => [id, title, artist, album, albumId, uri, duration, dateAdded];
+  List<Object?> get props => [id, title, artist, album, albumId, uri, duration, dateAdded, size, fileExtension];
 }

@@ -6,6 +6,7 @@ import '../../../../features/library/presentation/bloc/library_bloc.dart';
 import '../../../../features/library/presentation/bloc/library_state.dart';
 import '../../../../features/player/presentation/bloc/player_bloc.dart';
 import '../../../../features/player/presentation/bloc/player_event.dart';
+import '../../../../features/player/presentation/widgets/mini_player_widget.dart';
 import '../../data/models/playlist_model.dart';
 import '../bloc/playlist_bloc.dart';
 import '../bloc/playlist_event.dart';
@@ -59,56 +60,68 @@ class PlaylistDetailPage extends StatelessWidget {
                   ],
                 ),
               ),
-              child: BlocBuilder<LibraryBloc, LibraryState>(
-                builder: (context, libraryState) {
-                  List<Song> playlistSongs = [];
-                  if (libraryState is LibraryLoaded) {
-                    // Filter songs that are in the playlist
-                    // optimize: make a map if large, but for now list contains is fine for < 1000 songs
-                    playlistSongs = libraryState.songs.where((song) => playlist!.songIds.contains(song.id)).toList();
-                  }
-
-                  if (playlistSongs.isEmpty) {
-                    return Center(
-                      child: Text(
-                        "No songs in this playlist",
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white54),
-                      ),
-                    );
-                  }
-
-                  return ListView.builder(
-                    itemCount: playlistSongs.length,
-                    itemBuilder: (context, index) {
-                      final song = playlistSongs[index];
-                      return ListTile(
-                        leading: QueryArtworkWidget(
-                          id: song.id,
-                          type: ArtworkType.AUDIO,
-                          nullArtworkWidget: Container(
-                            width: 50, height: 50,
-                            decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(4)),
-                            child: const Icon(Icons.music_note, color: Colors.white54),
-                          ),
-                        ),
-                        title: Text(song.title, maxLines: 1, overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.white)),
-                        subtitle: Text(song.artist ?? "Unknown", maxLines: 1, 
-                            style: const TextStyle(color: Colors.white54)),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.remove_circle_outline, color: Colors.white54),
-                          onPressed: () {
-                             context.read<PlaylistBloc>().add(RemoveSongFromPlaylistEvent(playlist!.id, song.id));
+              child: Stack(
+                children: [
+                   BlocBuilder<LibraryBloc, LibraryState>(
+                      builder: (context, libraryState) {
+                        List<Song> playlistSongs = [];
+                        if (libraryState is LibraryLoaded) {
+                          playlistSongs = libraryState.songs.where((song) => playlist!.songIds.contains(song.id)).toList();
+                        }
+      
+                        if (playlistSongs.isEmpty) {
+                          return Center(
+                            child: Text(
+                              "No songs in this playlist",
+                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white54),
+                            ),
+                          );
+                        }
+      
+                        return ListView.builder(
+                          padding: EdgeInsets.only(bottom: 100 + MediaQuery.of(context).padding.bottom), // Add padding for miniplayer + safe area
+                          itemCount: playlistSongs.length,
+                          itemBuilder: (context, index) {
+                            final song = playlistSongs[index];
+                            return ListTile(
+                              leading: QueryArtworkWidget(
+                                id: song.id,
+                                type: ArtworkType.AUDIO,
+                                nullArtworkWidget: Container(
+                                  width: 50, height: 50,
+                                  decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(4)),
+                                  child: const Icon(Icons.music_note, color: Colors.white54),
+                                ),
+                              ),
+                              title: Text(song.title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(color: Colors.white)),
+                              subtitle: Text(song.artist ?? "Unknown", maxLines: 1, 
+                                  style: const TextStyle(color: Colors.white54)),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.remove_circle_outline, color: Colors.white54),
+                                onPressed: () {
+                                   context.read<PlaylistBloc>().add(RemoveSongFromPlaylistEvent(playlist!.id, song.id));
+                                },
+                              ),
+                              onTap: () {
+                                 // Play this playlist
+                                 context.read<PlayerBloc>().add(PlayerSetQueue(playlistSongs, initialIndex: index));
+                              },
+                            );
                           },
-                        ),
-                        onTap: () {
-                           // Play this playlist
-                           context.read<PlayerBloc>().add(PlayerSetQueue(playlistSongs, initialIndex: index));
-                        },
-                      );
-                    },
-                  );
-                },
+                        );
+                      },
+                    ),
+                    Positioned(
+                      left: 0, 
+                      right: 0,
+                      bottom: 0,
+                      child: SafeArea(
+                        top: false,
+                        child: const MiniPlayerWidget(),
+                      ),
+                    ),
+                ],
               ),
           ),
         );

@@ -17,6 +17,13 @@ class PlayerPlaySong extends PlayerEvent {
   List<Object?> get props => [song];
 }
 
+class PlayerLoadLyrics extends PlayerEvent {
+  final Song song;
+  const PlayerLoadLyrics(this.song);
+  @override
+  List<Object?> get props => [song];
+}
+
 class PlayerPause extends PlayerEvent {}
 class PlayerResume extends PlayerEvent {}
 class PlayerSeek extends PlayerEvent {

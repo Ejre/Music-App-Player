@@ -2,6 +2,8 @@ import 'package:injectable/injectable.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import 'audio_player_handler.dart';
+import '../../../../features/library/domain/entities/song.dart';
+
 
 abstract class AudioPlayerService {
   Future<void> setUrl(String url, {String? title, String? artist, String? artUri, int? id});
@@ -14,6 +16,11 @@ abstract class AudioPlayerService {
   Stream<PlayerState> get playerStateStream;
   Stream<void> get skipToNextStream;
   Stream<void> get skipToPreviousStream;
+  Future<void> skipToNext();
+  Future<void> skipToPrevious();
+  Future<void> skipToQueueItem(int index);
+  Stream<MediaItem?> get mediaItemStream; 
+  Future<void> setQueue(List<Song> songs, int initialIndex);
   Future<int?> getAudioSessionId();
 }
 
@@ -67,6 +74,35 @@ class AudioPlayerServiceImpl implements AudioPlayerService {
 
   @override
   Stream<void> get skipToPreviousStream => (_audioHandler as AudioPlayerHandler).skipToPreviousStream;
+
+  @override
+  Future<void> skipToNext() => _audioHandler.skipToNext();
+
+  @override
+  Future<void> skipToPrevious() => _audioHandler.skipToPrevious();
+
+  @override
+  Future<void> skipToQueueItem(int index) => _audioHandler.skipToQueueItem(index);
+
+  @override
+  Stream<MediaItem?> get mediaItemStream => _audioHandler.mediaItem;
+
+  @override
+  Future<void> setQueue(List<Song> songs, int initialIndex) async {
+    final mediaItems = songs.map((song) => MediaItem(
+      id: song.id.toString(),
+      album: song.album ?? "Unknown Album",
+      title: song.title,
+      artist: song.artist,
+      duration: song.duration != null ? Duration(milliseconds: song.duration!) : null,
+      artUri: song.albumId != null 
+          ? Uri.parse("content://media/external/audio/albumart/${song.albumId}") 
+          : null,
+      extras: {'uri': song.uri},
+    )).toList();
+
+    await (_audioHandler as AudioPlayerHandler).setQueue(mediaItems, initialIndex);
+  }
 
   @override
   Future<int?> getAudioSessionId() async {

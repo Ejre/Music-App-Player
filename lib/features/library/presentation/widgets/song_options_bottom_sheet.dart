@@ -5,6 +5,9 @@ import '../../domain/entities/song.dart';
 import '../../../playlist/presentation/bloc/playlist_bloc.dart';
 import '../../../playlist/presentation/bloc/playlist_state.dart';
 import '../../../playlist/presentation/bloc/playlist_event.dart';
+import '../../../favorites/presentation/bloc/favorite_bloc.dart';
+import '../../../favorites/presentation/bloc/favorite_state.dart';
+import '../../../favorites/presentation/bloc/favorite_event.dart';
 
 class SongOptionsBottomSheet extends StatelessWidget {
   final Song song;
@@ -106,7 +109,24 @@ class SongOptionsBottomSheet extends StatelessWidget {
                 _buildBigActionButton(context, Icons.playlist_add, "Save to playlist", () {
                    _showAddToPlaylistDialog(context);
                 }),
-                // Share button removed as requested
+                const SizedBox(width: 24),
+                BlocBuilder<FavoriteBloc, FavoriteState>(
+                  builder: (context, state) {
+                    bool isFavorite = false;
+                    if (state is FavoriteLoaded) {
+                      isFavorite = state.favoriteIds.contains(song.id);
+                    }
+                    return _buildBigActionButton(
+                      context, 
+                      isFavorite ? Icons.favorite : Icons.favorite_border, 
+                      "Favorite", 
+                      () {
+                         context.read<FavoriteBloc>().add(ToggleFavorite(song));
+                      },
+                      color: isFavorite ? const Color(0xFF39C5BB) : Colors.white,
+                    );
+                  },
+                ),
               ],
             ),
           ),
@@ -258,7 +278,7 @@ class SongOptionsBottomSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildBigActionButton(BuildContext context, IconData icon, String label, VoidCallback onTap) {
+  Widget _buildBigActionButton(BuildContext context, IconData icon, String label, VoidCallback onTap, {Color color = Colors.white}) {
     return InkWell(
       onTap: onTap,
       child: Container(
@@ -270,7 +290,7 @@ class SongOptionsBottomSheet extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Icon(icon, color: Colors.white, size: 28),
+            Icon(icon, color: color, size: 28),
             const SizedBox(height: 8),
             Text(
               label,

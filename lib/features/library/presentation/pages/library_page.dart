@@ -119,7 +119,10 @@ class _LibraryPageState extends State<LibraryPage> {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                child: MiniPlayerWidget(),
+                child: SafeArea(
+                  top: false, 
+                  child: const MiniPlayerWidget(),
+                ),
               ),
             ],
           ),
@@ -144,7 +147,8 @@ class _LibraryPageState extends State<LibraryPage> {
                 physics: const BouncingScrollPhysics(),
                 cacheExtent: 500,
                 itemExtent: 81.0, 
-                padding: const EdgeInsets.fromLTRB(0, 0, 0, 100),
+                // Add padding for miniplayer + safe area
+                padding: EdgeInsets.fromLTRB(0, 0, 0, 100 + MediaQuery.of(context).padding.bottom),
                 itemCount: state.songs.length,
                 itemBuilder: (context, index) {
                   final song = state.songs[index];

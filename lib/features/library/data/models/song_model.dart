@@ -11,6 +11,8 @@ class SongModel extends Song {
     super.uri,
     super.duration,
     super.dateAdded,
+    super.size,
+    super.fileExtension,
   });
 
   factory SongModel.fromQueryModel(query.SongModel model) {
@@ -23,6 +25,8 @@ class SongModel extends Song {
       uri: model.data,
       duration: model.duration,
       dateAdded: model.dateAdded?.toString(),
+      size: model.size,
+      fileExtension: model.fileExtension,
     );
   }
 }

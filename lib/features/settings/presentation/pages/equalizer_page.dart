@@ -104,6 +104,26 @@ class _EqualizerPageState extends State<EqualizerPage> {
            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Force Global Init Failed: $e")));
         }
       }
+   }
+
+  Future<void> _resetBands() async {
+    if (_bands.isEmpty || !_enableCustomEq) return;
+    
+    // Set all bands to 0 (flat)
+    for (int i = 0; i < _bands.length; i++) {
+       try {
+         await platform.invokeMethod('setBandLevel', {'band': i, 'level': 0});
+       } catch (e) {
+         debugPrint("Error resetting band $i: $e");
+       }
+    }
+    
+    // Update UI
+    if (mounted) {
+      setState(() {
+        _bandLevels = List.filled(_bands.length, 0.0);
+      });
+    }
   }
 
   @override
@@ -115,9 +135,9 @@ class _EqualizerPageState extends State<EqualizerPage> {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _initEqualizer,
-            tooltip: "Retry Connection",
+            icon: const Icon(Icons.restart_alt),
+            onPressed: () => _resetBands(),
+            tooltip: "Reset to Default",
           ),
         ],
       ),

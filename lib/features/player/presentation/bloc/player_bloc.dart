@@ -19,6 +19,7 @@ class PlayerBloc extends Bloc<PlayerEvent, bloc_state.PlayerState> {
 
   StreamSubscription? _skipNextSubscription;
   StreamSubscription? _skipPreviousSubscription;
+  StreamSubscription? _mediaItemSubscription;
 
   PlayerBloc(this._playerService, this._lyricsRepository) : super(const bloc_state.PlayerState()) {
     on<PlayerPlaySong>(_onPlaySong);
@@ -35,6 +36,8 @@ class PlayerBloc extends Bloc<PlayerEvent, bloc_state.PlayerState> {
     on<PlayerPositionChanged>(_onPositionChanged);
     on<SetSleepTimer>(_onSetSleepTimer);
     on<CancelSleepTimer>(_onCancelSleepTimer);
+    on<PlayerLoadLyrics>(_onLoadLyrics);
+    on<PlayerCheckLyrics>(_onCheckLyrics);
 
     // Listen to service streams
     _playerStateSubscription = _playerService.playerStateStream.listen((playerState) {
@@ -69,11 +72,43 @@ class PlayerBloc extends Bloc<PlayerEvent, bloc_state.PlayerState> {
     });
 
     _skipNextSubscription = _playerService.skipToNextStream.listen((_) {
-      add(PlayerNext());
+       // Since moving logic to handler, this stream might be triggered BY the handler
+       // when it skips. We don't need to do logic here, just maybe update UI?
+       // Actually, we should listen to MEDIA ITEM change to update UI.
+       // Skip stream is mostly for UI buttons if we were using 'text' notifications
+       // but here AudioHandler triggers it? 
+       // JustAudioBackground handles notification buttons automatically calling skipToNext.
     });
 
     _skipPreviousSubscription = _playerService.skipToPreviousStream.listen((_) {
-      add(PlayerPrevious());
+    });
+
+    _mediaItemSubscription = _playerService.mediaItemStream.listen((mediaItem) {
+        if (mediaItem == null) return;
+        
+        // Find song in queue that matches mediaItem
+        // Or reconstruct song?
+        // Ideally we find it in our queue to keep object reference consistency if possible
+        try {
+           final matchSong = state.queue.firstWhere((s) => s.id.toString() == mediaItem.id);
+           final index = state.queue.indexOf(matchSong);
+           
+           if (matchSong != state.currentSong) {
+              add(PlayerPlaySong(matchSong)); // Re-use event to update state
+              // But we need to make sure _onPlaySong doesn't restart playback if it's already playing!
+              // See _onPlaySong changes.
+              
+              // Actually, better: emit state directly or have a valid event "PlayerSongChanged"
+              // Reuse _onPlaySong but remove the 'setUrl' part inside it?
+           }
+           
+           // Update index
+           if (index != -1 && index != state.currentIndex) {
+              emit(state.copyWith(currentIndex: index));
+           }
+        } catch (e) {
+           // Not found in queue?
+        }
     });
   }
   
@@ -123,70 +158,16 @@ class PlayerBloc extends Bloc<PlayerEvent, bloc_state.PlayerState> {
   }
 
   Future<void> _onSetQueue(PlayerSetQueue event, Emitter<bloc_state.PlayerState> emit) async {
-    emit(state.copyWith(queue: event.queue, currentIndex: event.initialIndex));
-    add(PlayerPlaySong(event.queue[event.initialIndex]));
+    emit(state.copyWith(queue: event.queue));
+    await _playerService.setQueue(event.queue, event.initialIndex);
   }
 
   Future<void> _onNext(PlayerNext event, Emitter<bloc_state.PlayerState> emit) async {
-    if (state.queue.isEmpty) return;
-
-    if (state.loopMode == bloc_state.LoopMode.one) {
-      // If native looping fails or we want to force it
-      // replay current is logic. But just_audio handles one usually.
-      // If we are here, it means we manually pressed Next. 
-      // If manual Next on Repeat One, usually we go to next song or replay?
-      // Standard behavior: Manual Next -> Next song. Auto completion -> Replay.
-      // Since this _onNext is called by Auto Completion (via listener) AND Manual Button
-      // We need to know context. But listener logic is:
-      // if (playerState.processingState == ProcessingState.completed) add(PlayerNext());
-      // just_audio LoopMode.one prevents 'completed' state usually.
-    }
-
-    int nextIndex;
-    if (state.isShuffleMode) {
-       // Simple random shuffle for now
-       nextIndex = (DateTime.now().millisecondsSinceEpoch % state.queue.length);
-       if (state.queue.length > 1 && nextIndex == state.currentIndex) {
-          nextIndex = (nextIndex + 1) % state.queue.length;
-       }
-    } else {
-      nextIndex = state.currentIndex + 1;
-      if (nextIndex >= state.queue.length) {
-        if (state.loopMode == bloc_state.LoopMode.all) {
-          nextIndex = 0; // Wrap around
-        } else {
-          // Stop playback at end of queue
-           await _playerService.pause();
-           await _playerService.seek(Duration.zero);
-           return;
-        }
-      }
-    }
-
-    emit(state.copyWith(currentIndex: nextIndex));
-    add(PlayerPlaySong(state.queue[nextIndex]));
+    await _playerService.skipToNext();
   }
 
   Future<void> _onPrevious(PlayerPrevious event, Emitter<bloc_state.PlayerState> emit) async {
-    if (state.queue.isEmpty) return;
-    
-    if (state.position.inSeconds > 3) {
-      await _playerService.seek(Duration.zero);
-      return;
-    }
-
-    int prevIndex;
-    if (state.isShuffleMode) {
-       prevIndex = (DateTime.now().millisecondsSinceEpoch % state.queue.length);
-    } else {
-      prevIndex = state.currentIndex - 1;
-      if (prevIndex < 0) {
-        prevIndex = state.queue.length - 1;
-      }
-    }
-
-    emit(state.copyWith(currentIndex: prevIndex));
-    add(PlayerPlaySong(state.queue[prevIndex]));
+     await _playerService.skipToPrevious();
   }
 
   void _onShuffle(PlayerShuffle event, Emitter<bloc_state.PlayerState> emit) {
@@ -206,10 +187,10 @@ class PlayerBloc extends Bloc<PlayerEvent, bloc_state.PlayerState> {
          audioLoopMode = LoopMode.off;
          break;
       case bloc_state.LoopMode.all:
-         audioLoopMode = LoopMode.off; // We handle 'all' manually in _onNext
+         audioLoopMode = LoopMode.off; 
          break;
       case bloc_state.LoopMode.one:
-         audioLoopMode = LoopMode.one; // Native repeat one
+         audioLoopMode = LoopMode.one; 
          break;
     }
     await _playerService.setLoopMode(audioLoopMode);
@@ -222,27 +203,39 @@ class PlayerBloc extends Bloc<PlayerEvent, bloc_state.PlayerState> {
       lyrics: [], // Clear old lyrics
       currentLyricLine: null,
     ));
+    
+    add(PlayerLoadLyrics(event.song));
 
-    if (event.song.uri != null) {
-      // Fetch lyrics
-      final lyrics = await _lyricsRepository.getLyrics(event.song.uri!);
-      
-      await _playerService.setUrl(
-        event.song.uri!,
-        title: event.song.title,
-        artist: event.song.artist,
-        id: event.song.id,
-        artUri: event.song.albumId != null 
-          ? "content://media/external/audio/albumart/${event.song.albumId}" 
-          : null,
-      );
-      
-      // Update lyrics in state
-      if (!emit.isDone) {
-         emit(state.copyWith(lyrics: lyrics));
-      }
-      // setUrl in Service now handles play via Handler
+    // If playSong is called for a single song, we check if it matches one in the queue
+    int index = -1;
+    if (state.queue.isNotEmpty) {
+      index = state.queue.indexWhere((s) => s.id == event.song.id);
     }
+
+    if (index != -1) {
+       // Song found in queue, skip to it
+       // But only skipping if we are not already playing it?
+       // Just audio handles seeking to same item usually restarts it or does nothing.
+       // We should force play if paused?
+       await _playerService.skipToQueueItem(index);
+       await _playerService.play();
+    } else {
+       // Song not in queue, create a queue of 1 and play
+       await _playerService.setQueue([event.song], 0);
+    }
+  }
+
+  Future<void> _onLoadLyrics(PlayerLoadLyrics event, Emitter<bloc_state.PlayerState> emit) async {
+      if (event.song.uri == null) return;
+      try {
+        final lyrics = await _lyricsRepository.getLyrics(event.song.uri!);
+        // Only update if the song hasn't changed in the meantime
+        if (state.currentSong?.id == event.song.id) {
+           emit(state.copyWith(lyrics: lyrics ?? []));
+        }
+      } catch (e) {
+         // Ignore
+      }
   }
 
   Future<void> _onPause(PlayerPause event, Emitter<bloc_state.PlayerState> emit) async {
@@ -259,14 +252,10 @@ class PlayerBloc extends Bloc<PlayerEvent, bloc_state.PlayerState> {
 
 
   Future<void> _onCheckLyrics(PlayerCheckLyrics event, Emitter<bloc_state.PlayerState> emit) async {
-    if (state.currentSong?.uri == null) return;
+    if (state.currentSong == null) return;
     
-    // Only fetch if we don't have lyrics (or maybe we want to retry anyway just in case file appeared)
     if (state.lyrics == null || state.lyrics!.isEmpty) {
-       final lyrics = await _lyricsRepository.getLyrics(state.currentSong!.uri!);
-       if (lyrics != null && lyrics.isNotEmpty) {
-          emit(state.copyWith(lyrics: lyrics));
-       }
+       add(PlayerLoadLyrics(state.currentSong!));
     }
   }
 
@@ -277,6 +266,7 @@ class PlayerBloc extends Bloc<PlayerEvent, bloc_state.PlayerState> {
     _durationSubscription?.cancel();
     _skipNextSubscription?.cancel();
     _skipPreviousSubscription?.cancel();
+    _mediaItemSubscription?.cancel();
     _sleepTimer?.cancel();
     return super.close();
   }

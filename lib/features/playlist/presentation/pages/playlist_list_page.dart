@@ -16,7 +16,7 @@ class PlaylistListPage extends StatelessWidget {
         builder: (context, state) {
           if (state is PlaylistLoaded && state.playlists.isNotEmpty) {
             return Padding(
-              padding: const EdgeInsets.only(bottom: 80.0),
+              padding: EdgeInsets.only(bottom: 80.0 + MediaQuery.of(context).padding.bottom),
               child: FloatingActionButton(
                 backgroundColor: const Color(0xFF39C5BB),
                 child: const Icon(Icons.add, color: Colors.black),
@@ -144,9 +144,13 @@ class PlaylistListPage extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
-              if (controller.text.isNotEmpty) {
+              if (controller.text.trim().isNotEmpty) {
                 context.read<PlaylistBloc>().add(CreatePlaylistEvent(controller.text));
                 Navigator.pop(context);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Playlist name cannot be empty")),
+                );
               }
             },
             child: const Text("Create", style: TextStyle(color: Color(0xFF39C5BB))),
@@ -180,9 +184,13 @@ class PlaylistListPage extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
-              if (controller.text.isNotEmpty) {
+              if (controller.text.trim().isNotEmpty) {
                 context.read<PlaylistBloc>().add(RenamePlaylistEvent(playlistId, controller.text));
                 Navigator.pop(context);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Playlist name cannot be empty")),
+                );
               }
             },
             child: const Text("Rename", style: TextStyle(color: Color(0xFF39C5BB))),
